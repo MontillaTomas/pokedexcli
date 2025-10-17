@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func main() {
-    fmt.Println("Hello, World!")
+	var text string = "Hello, World!"
+	fmt.Println(text)
+	cleanedWords := cleanInput(text)
+	fmt.Println("Returned words:", cleanedWords)
+}
+
+func cleanInput(text string) []string {
+	words := strings.Fields(text)
+	return words
 }
