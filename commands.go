@@ -1,26 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
+
+	"github.com/MontillaTomas/pokedexcli/internal/pokeapi"
 )
 
 type cliCommand struct {
 	name        string
 	description string
 	callback    func() error
-}
-
-type LocationAreaResponse struct {
-	Count    int     `json:"count"`
-	Next     string  `json:"next"`
-	Previous *string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"results"`
 }
 
 func commandExit() error {
@@ -40,43 +30,22 @@ func commandHelp(commands map[string]cliCommand) func() error {
 	}
 }
 
-func commandMap() (func() error, func() error) {
-	url := "https://pokeapi.co/api/v2/location-area/"
+func commandMap(client *pokeapi.Client) (func() error, func() error) {
+	var nextURL string
 	var prevURL *string
 
-	fetch := func(targetURL string) (*LocationAreaResponse, error) {
-		res, err := http.Get(targetURL)
-		if err != nil {
-			return nil, err
-		}
-		defer res.Body.Close()
-
-		var response LocationAreaResponse
-		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-			return nil, err
-		}
-
-		for _, loc := range response.Results {
-			fmt.Println(loc.Name)
-		}
-
-		return &response, nil
-	}
-
 	forward := func() error {
-		if url == "" {
-			fmt.Println("No more locations to display.")
-			return nil
-		}
-
-		response, err := fetch(url)
+		resp, err := client.GetLocationAreas(nextURL)
 		if err != nil {
 			return err
 		}
 
-		prevURL = response.Previous
-		url = response.Next
+		for _, loc := range resp.Results {
+			fmt.Println(loc.Name)
+		}
 
+		nextURL = resp.Next
+		prevURL = resp.Previous
 		return nil
 	}
 
@@ -86,14 +55,17 @@ func commandMap() (func() error, func() error) {
 			return nil
 		}
 
-		response, err := fetch(*prevURL)
+		resp, err := client.GetLocationAreas(*prevURL)
 		if err != nil {
 			return err
 		}
 
-		prevURL = response.Previous
-		url = response.Next
+		for _, loc := range resp.Results {
+			fmt.Println(loc.Name)
+		}
 
+		nextURL = resp.Next
+		prevURL = resp.Previous
 		return nil
 	}
 
@@ -113,7 +85,8 @@ func initCommands() map[string]cliCommand {
 		callback:    commandHelp(commands),
 	}
 
-	forward, backward := commandMap()
+	client := pokeapi.NewClient(10 * 1e9) // 10 seconds
+	forward, backward := commandMap(client)
 	commands["map"] = cliCommand{
 		name:        "map",
 		description: "Displays the names of 20 location areas in the Pokemon world. Each time you run this command, it shows the next set of 20 locations.",
