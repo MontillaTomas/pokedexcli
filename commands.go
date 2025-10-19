@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/MontillaTomas/pokedexcli/internal/pokeapi"
 )
@@ -24,7 +25,15 @@ func commandHelp(commands map[string]cliCommand) func(args []string) error {
 		fmt.Println("Welcome to the Pokedex!")
 		fmt.Println("Usage:")
 		fmt.Println("")
-		for _, cmd := range commands {
+
+		names := make([]string, 0, len(commands))
+		for name := range commands {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		for _, name := range names {
+			cmd := commands[name]
 			fmt.Printf("%s: %s\n", cmd.name, cmd.description)
 		}
 		return nil
