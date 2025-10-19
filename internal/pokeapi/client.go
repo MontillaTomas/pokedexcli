@@ -67,3 +67,45 @@ func (c *Client) GetLocationAreas(url string) (*LocationAreaResponse, error) {
 
 	return &data, nil
 }
+
+func (c *Client) GetLocationAreaPokemons(locationAreaName string) (*LocationAreaDetailsResponse, error) {
+	fullURL := c.BaseURL + "location-area/" + locationAreaName + "/"
+
+	// Check cache first
+	if c.cache != nil {
+		if cachedData, found := c.cache.Get(fullURL); found {
+			var data LocationAreaDetailsResponse
+			if err := json.Unmarshal(cachedData, &data); err == nil {
+				return &data, nil
+			}
+		}
+	}
+
+	// Fetch from API
+	res, err := c.httpClient.Get(fullURL)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("location area '%s' not found", locationAreaName)
+		}
+		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+	}
+
+	var data LocationAreaDetailsResponse
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	if c.cache != nil {
+		rawData, err := json.Marshal(data)
+		if err == nil {
+			c.cache.Add(fullURL, rawData)
+		}
+	}
+
+	return &data, nil
+}

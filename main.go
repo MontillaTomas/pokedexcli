@@ -38,7 +38,7 @@ func startREPL() {
 			continue
 		}
 
-		if err := command.callback(); err != nil {
+		if err := command.callback(cleanedInput[1:]); err != nil {
 			fmt.Printf("Error executing command %s: %v\n", commandName, err)
 		}
 	}

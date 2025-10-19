@@ -10,17 +10,17 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(args []string) error
 }
 
-func commandExit() error {
+func commandExit(args []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(commands map[string]cliCommand) func() error {
-	return func() error {
+func commandHelp(commands map[string]cliCommand) func(args []string) error {
+	return func(args []string) error {
 		fmt.Println("Welcome to the Pokedex!")
 		fmt.Println("Usage:")
 		fmt.Println("")
@@ -31,11 +31,11 @@ func commandHelp(commands map[string]cliCommand) func() error {
 	}
 }
 
-func commandMap(client *pokeapi.Client) (func() error, func() error) {
+func commandMap(client *pokeapi.Client) (func(args []string) error, func(args []string) error) {
 	var nextURL string
 	var prevURL *string
 
-	forward := func() error {
+	forward := func(args []string) error {
 		resp, err := client.GetLocationAreas(nextURL)
 		if err != nil {
 			return err
@@ -50,7 +50,7 @@ func commandMap(client *pokeapi.Client) (func() error, func() error) {
 		return nil
 	}
 
-	backward := func() error {
+	backward := func(args []string) error {
 		if prevURL == nil || *prevURL == "" {
 			fmt.Println("No previous locations to display.")
 			return nil
@@ -73,8 +73,32 @@ func commandMap(client *pokeapi.Client) (func() error, func() error) {
 	return forward, backward
 }
 
+func commandExploreLocationArea(client *pokeapi.Client) func(args []string) error {
+	return func(args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("location area name is required")
+		}
+		locationAreaName := args[0]
+
+		details, err := client.GetLocationAreaPokemons(locationAreaName)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Exploring %s...\n", details.Name)
+		fmt.Println("Found Pokemon:")
+		for _, encounter := range details.PokemonEncounters {
+			fmt.Println("- ", encounter.Pokemon.Name)
+		}
+
+		return nil
+	}
+}
+
 func initCommands() map[string]cliCommand {
 	commands := make(map[string]cliCommand)
+	client := pokeapi.NewClient(10 * 1e9) // 10 seconds
+
 	commands["exit"] = cliCommand{
 		name:        "exit",
 		description: "Exit the Pokedex",
@@ -86,7 +110,6 @@ func initCommands() map[string]cliCommand {
 		callback:    commandHelp(commands),
 	}
 
-	client := pokeapi.NewClient(10 * 1e9) // 10 seconds
 	forward, backward := commandMap(client)
 	commands["map"] = cliCommand{
 		name:        "map",
@@ -97,6 +120,11 @@ func initCommands() map[string]cliCommand {
 		name:        "mapb",
 		description: "Displays the previous 20 location areas in the Pokemon world.",
 		callback:    backward,
+	}
+	commands["explore"] = cliCommand{
+		name:        "explore <location_area_name>",
+		description: "Explore a specific location area by its name to see the Pokemon that can be encountered there.",
+		callback:    commandExploreLocationArea(client),
 	}
 
 	return commands
