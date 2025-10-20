@@ -105,8 +105,7 @@ func commandExploreLocationArea(client *pokeapi.Client) func(args []string) erro
 	}
 }
 
-func commandCatch(client *pokeapi.Client) func(args []string) error {
-	pokedex := make(map[string]pokeapi.Pokemon)
+func commandCatch(client *pokeapi.Client, pokedex *Pokedex) func(args []string) error {
 	return func(args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf("pokemon name is required")
@@ -125,7 +124,7 @@ func commandCatch(client *pokeapi.Client) func(args []string) error {
 			catchChance = 10
 		}
 		if rand.Intn(100) < catchChance {
-			pokedex[pokemon.Name] = *pokemon
+			pokedex.Add(*pokemon)
 			fmt.Printf("%s was caught!\n", pokemon.Name)
 		} else {
 			fmt.Printf("%s escaped!\n", pokemon.Name)
@@ -135,9 +134,38 @@ func commandCatch(client *pokeapi.Client) func(args []string) error {
 	}
 }
 
+func commandInspect(pokedex *Pokedex) func(args []string) error {
+	return func(args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("pokemon name is required")
+		}
+		pokemonName := args[0]
+
+		pokemon, exists := pokedex.Get(pokemonName)
+		if !exists {
+			return fmt.Errorf("you have not caught that pokemon")
+		}
+
+		fmt.Printf("Name: %s\n", pokemon.Name)
+		fmt.Printf("Height: %d\n", pokemon.Height)
+		fmt.Printf("Weight: %d\n", pokemon.Weight)
+		fmt.Printf("Stats:\n")
+		for _, stat := range pokemon.Stats {
+			fmt.Printf("\t-%s: %d\n", stat.Stat.Name, stat.BaseStat)
+		}
+		fmt.Printf("Types:\n")
+		for _, t := range pokemon.Types {
+			fmt.Printf("\t-%s\n", t.Type.Name)
+		}
+
+		return nil
+	}
+}
+
 func initCommands() map[string]cliCommand {
 	commands := make(map[string]cliCommand)
 	client := pokeapi.NewClient(10 * 1e9) // 10 seconds
+	pokedex := NewPokedex()
 
 	commands["exit"] = cliCommand{
 		name:        "exit",
@@ -169,7 +197,12 @@ func initCommands() map[string]cliCommand {
 	commands["catch"] = cliCommand{
 		name:        "catch <pokemon_name>",
 		description: "Attempt to catch a Pokemon by its name.",
-		callback:    commandCatch(client),
+		callback:    commandCatch(client, pokedex),
+	}
+	commands["inspect"] = cliCommand{
+		name:        "inspect <pokemon_name>",
+		description: "Inspect a caught Pokemon to see its details.",
+		callback:    commandInspect(pokedex),
 	}
 
 	return commands
