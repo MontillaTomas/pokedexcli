@@ -162,6 +162,21 @@ func commandInspect(pokedex *Pokedex) func(args []string) error {
 	}
 }
 
+func commandPokedex(pokedex *Pokedex) func(args []string) error {
+	return func(args []string) error {
+		allPokemons := pokedex.All()
+		if len(allPokemons) == 0 {
+			fmt.Println("You have not caught any Pokemon yet.")
+			return nil
+		}
+		fmt.Println("Your Pokedex:")
+		for _, pokemon := range allPokemons {
+			fmt.Printf(" - %s\n", pokemon.Name)
+		}
+		return nil
+	}
+}
+
 func initCommands() map[string]cliCommand {
 	commands := make(map[string]cliCommand)
 	client := pokeapi.NewClient(10 * 1e9) // 10 seconds
@@ -203,6 +218,11 @@ func initCommands() map[string]cliCommand {
 		name:        "inspect <pokemon_name>",
 		description: "Inspect a caught Pokemon to see its details.",
 		callback:    commandInspect(pokedex),
+	}
+	commands["pokedex"] = cliCommand{
+		name:        "pokedex",
+		description: "List all caught Pokemon in your Pokedex.",
+		callback:    commandPokedex(pokedex),
 	}
 
 	return commands
