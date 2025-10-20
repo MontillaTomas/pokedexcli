@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"sort"
 
@@ -104,6 +105,36 @@ func commandExploreLocationArea(client *pokeapi.Client) func(args []string) erro
 	}
 }
 
+func commandCatch(client *pokeapi.Client) func(args []string) error {
+	pokedex := make(map[string]pokeapi.Pokemon)
+	return func(args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("pokemon name is required")
+		}
+		pokemonName := args[0]
+
+		pokemon, err := client.GetPokemon(pokemonName)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Throwing a Pokeball at %s...\n", pokemon.Name)
+
+		catchChance := 100 - pokemon.BaseExperience/2
+		if catchChance < 10 {
+			catchChance = 10
+		}
+		if rand.Intn(100) < catchChance {
+			pokedex[pokemon.Name] = *pokemon
+			fmt.Printf("%s was caught!\n", pokemon.Name)
+		} else {
+			fmt.Printf("%s escaped!\n", pokemon.Name)
+		}
+
+		return nil
+	}
+}
+
 func initCommands() map[string]cliCommand {
 	commands := make(map[string]cliCommand)
 	client := pokeapi.NewClient(10 * 1e9) // 10 seconds
@@ -134,6 +165,11 @@ func initCommands() map[string]cliCommand {
 		name:        "explore <location_area_name>",
 		description: "Explore a specific location area by its name to see the Pokemon that can be encountered there.",
 		callback:    commandExploreLocationArea(client),
+	}
+	commands["catch"] = cliCommand{
+		name:        "catch <pokemon_name>",
+		description: "Attempt to catch a Pokemon by its name.",
+		callback:    commandCatch(client),
 	}
 
 	return commands

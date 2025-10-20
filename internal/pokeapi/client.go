@@ -25,7 +25,7 @@ func NewClient(timeout time.Duration) *Client {
 	}
 }
 
-func (c *Client) GetLocationAreas(url string) (*LocationAreaResponse, error) {
+func (c *Client) GetLocationAreas(url string) (*LocationArea, error) {
 	fullURL := url
 	if fullURL == "" {
 		fullURL = c.BaseURL + "location-area/"
@@ -34,7 +34,7 @@ func (c *Client) GetLocationAreas(url string) (*LocationAreaResponse, error) {
 	// Check cache first
 	if c.cache != nil {
 		if cachedData, found := c.cache.Get(fullURL); found {
-			var data LocationAreaResponse
+			var data LocationArea
 			if err := json.Unmarshal(cachedData, &data); err == nil {
 				return &data, nil
 			}
@@ -52,7 +52,7 @@ func (c *Client) GetLocationAreas(url string) (*LocationAreaResponse, error) {
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
-	var data LocationAreaResponse
+	var data LocationArea
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return nil, err
 	}
@@ -68,13 +68,13 @@ func (c *Client) GetLocationAreas(url string) (*LocationAreaResponse, error) {
 	return &data, nil
 }
 
-func (c *Client) GetLocationAreaPokemons(locationAreaName string) (*LocationAreaDetailsResponse, error) {
+func (c *Client) GetLocationAreaPokemons(locationAreaName string) (*LocationAreaDetails, error) {
 	fullURL := c.BaseURL + "location-area/" + locationAreaName + "/"
 
 	// Check cache first
 	if c.cache != nil {
 		if cachedData, found := c.cache.Get(fullURL); found {
-			var data LocationAreaDetailsResponse
+			var data LocationAreaDetails
 			if err := json.Unmarshal(cachedData, &data); err == nil {
 				return &data, nil
 			}
@@ -94,7 +94,49 @@ func (c *Client) GetLocationAreaPokemons(locationAreaName string) (*LocationArea
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
-	var data LocationAreaDetailsResponse
+	var data LocationAreaDetails
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	if c.cache != nil {
+		rawData, err := json.Marshal(data)
+		if err == nil {
+			c.cache.Add(fullURL, rawData)
+		}
+	}
+
+	return &data, nil
+}
+
+func (c *Client) GetPokemon(pokemonName string) (*Pokemon, error) {
+	fullURL := c.BaseURL + "pokemon/" + pokemonName + "/"
+
+	// Check cache first
+	if c.cache != nil {
+		if cachedData, found := c.cache.Get(fullURL); found {
+			var data Pokemon
+			if err := json.Unmarshal(cachedData, &data); err == nil {
+				return &data, nil
+			}
+		}
+	}
+
+	// Fetch from API
+	res, err := c.httpClient.Get(fullURL)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("pokemon '%s' not found", pokemonName)
+		}
+		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+	}
+
+	var data Pokemon
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return nil, err
 	}

@@ -1,6 +1,6 @@
 package pokeapi
 
-type LocationAreaResponse struct {
+type LocationArea struct {
 	Count    int     `json:"count"`
 	Next     string  `json:"next"`
 	Previous *string `json:"previous"`
@@ -10,7 +10,7 @@ type LocationAreaResponse struct {
 	} `json:"results"`
 }
 
-type LocationAreaDetailsResponse struct {
+type LocationAreaDetails struct {
 	ID       int `json:"id"`
 	Location struct {
 		Name string `json:"name"`
@@ -40,4 +40,40 @@ type LocationAreaDetailsResponse struct {
 			} `json:"version"`
 		} `json:"version_details"`
 	} `json:"pokemon_encounters"`
+}
+
+type Pokemon struct {
+	Abilities []struct {
+		Ability struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"ability"`
+		IsHidden bool `json:"is_hidden"`
+		Slot     int  `json:"slot"`
+	} `json:"abilities"`
+	BaseExperience         int    `json:"base_experience"`
+	ID                     int    `json:"id"`
+	LocationAreaEncounters string `json:"location_area_encounters"`
+	Name                   string `json:"name"`
+	Weight                 int    `json:"weight"`
+	Height                 int    `json:"height"`
+	Species                struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"species"`
+	Stats []struct {
+		BaseStat int `json:"base_stat"`
+		Effort   int `json:"effort"`
+		Stat     struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"stat"`
+	} `json:"stats"`
+	Types []struct {
+		Slot int `json:"slot"`
+		Type struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"type"`
+	} `json:"types"`
 }
